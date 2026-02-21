@@ -26,6 +26,7 @@ interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
+  accessDenied: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -76,20 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await deleteDoc(doc(db, "users", oldDoc.id));
             setUserData(migratedData as UserData);
           } else {
-            // Brand new user — create doc
-            const newUserData: UserData = {
-              id: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              name: firebaseUser.displayName || "",
-              photoURL: firebaseUser.photoURL,
-              role: "viewer",
-              organizationId: null,
-              status: "online",
-              createdAt: new Date(),
-              lastLoginAt: new Date(),
-            };
-            await setDoc(userRef, newUserData);
-            setUserData(newUserData);
+            // Not invited — deny access and sign out
+            setAccessDenied(true);
+            await firebaseSignOut(auth);
+            setUser(null);
+            setUserData(null);
           }
         }
       } else {
@@ -104,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      setAccessDenied(false);
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Error signing in with Google:", error);
@@ -127,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, userData, loading, signInWithGoogle, signOut }}
+      value={{ user, userData, loading, accessDenied, signInWithGoogle, signOut }}
     >
       {children}
     </AuthContext.Provider>

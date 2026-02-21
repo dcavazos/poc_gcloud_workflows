@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["agent", "viewer"].includes(role)) {
+    if (!["admin", "agent", "viewer"].includes(role)) {
       return NextResponse.json(
-        { error: "Role must be 'agent' or 'viewer'" },
+        { error: "Role must be 'admin', 'agent', or 'viewer'" },
         { status: 400 }
       );
     }

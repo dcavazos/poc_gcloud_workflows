@@ -61,7 +61,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"agent" | "viewer">("agent");
+  const [inviteRole, setInviteRole] = useState<"admin" | "agent" | "viewer">("agent");
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
@@ -415,11 +415,12 @@ export default function TeamPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "agent" | "viewer")}>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "admin" | "agent" | "viewer")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="agent">Agente</SelectItem>
                   <SelectItem value="viewer">Observador</SelectItem>
                 </SelectContent>
