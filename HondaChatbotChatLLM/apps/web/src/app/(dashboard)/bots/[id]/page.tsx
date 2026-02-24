@@ -45,7 +45,7 @@ interface BotData {
 export default function EditBotPage() {
   const params = useParams();
   const router = useRouter();
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
   const [bot, setBot] = useState<BotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,7 +107,10 @@ export default function EditBotPage() {
     setChatllmLoading(true);
     setChatllmError("");
     try {
-      const res = await fetch(`/api/abacus-config?botId=${params.id}`);
+      const token = await user?.getIdToken();
+      const res = await fetch(`/api/abacus-config?botId=${params.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
 
       if (!res.ok || !data.success) {

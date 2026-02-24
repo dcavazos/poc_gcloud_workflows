@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == "admin";
+    }
+
+    function isAgent() {
+      return isAuthenticated() && getUserData().role in ["admin", "agent"];
+    }
+
+    function belongsToOrg(orgId) {
+      return isAuthenticated() && getUserData().organizationId == orgId;
+    }
+
+    // ── Users ──
+    match /users/{userId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        // Users can update their own doc but NOT role or organizationId
+        (request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(["role", "organizationId"]))
+        // Admins in the same org can change roles
+        || (isAdmin() && belongsToOrg(resource.data.organizationId))
+      );
+    }
+
+    // ── Bots ──
+    match /bots/{botId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdmin() && belongsToOrg(resource.data.organizationId);
+    }
+
+    // ── Teams ──
+    match /teams/{teamId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdmin() && belongsToOrg(resource.data.organizationId);
+    }
+
+    // ── WhatsApp Numbers ──
+    match /whatsappNumbers/{numberId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdmin() && belongsToOrg(resource.data.organizationId);
+    }
+
+    // ── Conversations ──
+    match /conversations/{convId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAgent() && belongsToOrg(resource.data.organizationId);
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && belongsToOrg(
+          get(/databases/$(database)/documents/conversations/$(convId)).data.organizationId
+        );
+        allow write: if isAgent() && belongsToOrg(
+          get(/databases/$(database)/documents/conversations/$(convId)).data.organizationId
+        );
+      }
+
+      // Notes subcollection
+      match /notes/{noteId} {
+        allow read: if isAuthenticated() && belongsToOrg(
+          get(/databases/$(database)/documents/conversations/$(convId)).data.organizationId
+        );
+        allow write: if isAgent() && belongsToOrg(
+          get(/databases/$(database)/documents/conversations/$(convId)).data.organizationId
+        );
+      }
+    }
+
+    // ── Templates ──
+    match /templates/{templateId} {
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      allow write: if isAdmin() && belongsToOrg(resource.data.organizationId);
+    }
+  }
+}

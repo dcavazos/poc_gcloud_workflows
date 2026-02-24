@@ -11,6 +11,11 @@ export interface Organization {
       end: string;
     };
   };
+  salesforceConfig?: {
+    instanceUrl: string;
+    username: string;
+    password: string;
+  };
 }
 
 // User

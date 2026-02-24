@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
+import { verifyAuthToken } from "@/lib/auth-middleware";
 
 const ABACUS_API_KEY = process.env.ABACUS_API_KEY;
 const ABACUS_API_BASE = "https://api.abacus.ai/api/v0";
@@ -18,6 +19,11 @@ async function abacusFetch(endpoint: string, params: Record<string, string> = {}
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await verifyAuthToken(request);
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const botId = searchParams.get("botId");
 

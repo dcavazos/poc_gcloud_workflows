@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Loader2, Bell, BellOff } from "lucide-react";
+import { MessageSquare, Loader2, Bell, BellOff, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/firebase";
 import {
@@ -13,6 +14,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   onSnapshot,
   Timestamp,
 } from "firebase/firestore";
@@ -37,6 +39,8 @@ export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [conversationsLimit, setConversationsLimit] = useState(50);
+  const [searchQuery, setSearchQuery] = useState("");
   const { permission, requestPermission, showNotification, playSound } = useNotifications();
   const prevWaitingCountRef = useRef<number>(0);
   const isInitialLoadRef = useRef<boolean>(true);
@@ -51,7 +55,8 @@ export default function ConversationsPage() {
     const q = query(
       conversationsRef,
       where("organizationId", "==", userData.organizationId),
-      orderBy("lastMessageAt", "desc")
+      orderBy("lastMessageAt", "desc"),
+      limit(conversationsLimit)
     );
 
     const unsubscribe = onSnapshot(
@@ -69,9 +74,7 @@ export default function ConversationsPage() {
           const newWaitingCount = convs.filter(c => c.status === "waiting_agent").length;
           if (newWaitingCount > prevWaitingCountRef.current) {
             playSound();
-            showNotification("Nueva conversacion esperando", {
-              body: "Un cliente solicita hablar con un agente",
-            });
+            showNotification("Nueva conversacion esperando", "Un cliente solicita hablar con un agente");
           }
           prevWaitingCountRef.current = newWaitingCount;
         } else {
@@ -86,7 +89,7 @@ export default function ConversationsPage() {
     );
 
     return () => unsubscribe();
-  }, [userData?.organizationId, playSound, showNotification]);
+  }, [userData?.organizationId, conversationsLimit, playSound, showNotification]);
 
   const statusLabels = {
     bot: "Con Bot",
@@ -102,13 +105,23 @@ export default function ConversationsPage() {
     closed: "bg-gray-100 text-gray-800",
   };
 
-  // Filter conversations based on active tab
+  // Filter conversations based on active tab and search
   const filteredConversations = conversations.filter((conv) => {
-    if (activeTab === "all") return conv.status !== "closed";
-    if (activeTab === "waiting") return conv.status === "waiting_agent";
-    if (activeTab === "active") return conv.status === "with_agent";
-    if (activeTab === "bot") return conv.status === "bot";
-    if (activeTab === "closed") return conv.status === "closed";
+    // Tab filter
+    if (activeTab === "all" && conv.status === "closed") return false;
+    if (activeTab === "waiting" && conv.status !== "waiting_agent") return false;
+    if (activeTab === "active" && conv.status !== "with_agent") return false;
+    if (activeTab === "bot" && conv.status !== "bot") return false;
+    if (activeTab === "closed" && conv.status !== "closed") return false;
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchesPhone = conv.customerPhone?.toLowerCase().includes(q);
+      const matchesName = conv.customerName?.toLowerCase().includes(q);
+      if (!matchesPhone && !matchesName) return false;
+    }
+
     return true;
   });
 
@@ -237,6 +250,17 @@ export default function ConversationsPage() {
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Buscar por nombre o telefono..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="all">
@@ -299,6 +323,18 @@ export default function ConversationsPage() {
           <ConversationList convs={filteredConversations} />
         </TabsContent>
       </Tabs>
+
+      {/* Load more */}
+      {conversations.length >= conversationsLimit && (
+        <div className="flex justify-center mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setConversationsLimit((prev) => prev + 50)}
+          >
+            Cargar mas
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
