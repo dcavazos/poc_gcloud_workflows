@@ -8,11 +8,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { instanceUrl, username, password } = await request.json();
+    const { instanceUrl, clientId, clientSecret, username, password } = await request.json();
 
-    if (!instanceUrl || !username || !password) {
+    if (!instanceUrl || !clientId || !clientSecret || !username || !password) {
       return NextResponse.json(
-        { error: "Faltan campos: instanceUrl, username, password" },
+        { error: "Todos los campos son requeridos" },
         { status: 400 }
       );
     }
@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "password",
+        client_id: clientId,
+        client_secret: clientSecret,
         username,
         password,
       }),

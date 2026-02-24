@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAuth } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,8 +17,12 @@ export default function SettingsPage() {
 
   // Salesforce config state
   const [sfInstanceUrl, setSfInstanceUrl] = useState("");
+  const [sfClientId, setSfClientId] = useState("");
+  const [sfClientSecret, setSfClientSecret] = useState("");
   const [sfUsername, setSfUsername] = useState("");
   const [sfPassword, setSfPassword] = useState("");
+  const [showSfClientId, setShowSfClientId] = useState(false);
+  const [showSfClientSecret, setShowSfClientSecret] = useState(false);
   const [showSfPassword, setShowSfPassword] = useState(false);
   const [sfSaving, setSfSaving] = useState(false);
   const [sfTesting, setSfTesting] = useState(false);
@@ -38,6 +43,8 @@ export default function SettingsPage() {
         const sfConfig = data.salesforceConfig;
         if (sfConfig) {
           setSfInstanceUrl(sfConfig.instanceUrl || "");
+          setSfClientId(sfConfig.clientId || "");
+          setSfClientSecret(sfConfig.clientSecret || "");
           setSfUsername(sfConfig.username || "");
           setSfPassword(sfConfig.password || "");
         }
@@ -52,11 +59,17 @@ export default function SettingsPage() {
     setSfTesting(true);
     setSfTestResult(null);
     try {
+      const token = await getAuth().currentUser?.getIdToken();
       const res = await fetch("/api/test-salesforce", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           instanceUrl: sfInstanceUrl.trim(),
+          clientId: sfClientId.trim(),
+          clientSecret: sfClientSecret.trim(),
           username: sfUsername.trim(),
           password: sfPassword.trim(),
         }),
@@ -83,6 +96,8 @@ export default function SettingsPage() {
       await setDoc(orgRef, {
         salesforceConfig: {
           instanceUrl: sfInstanceUrl.trim(),
+          clientId: sfClientId.trim(),
+          clientSecret: sfClientSecret.trim(),
           username: sfUsername.trim(),
           password: sfPassword.trim(),
         },
@@ -159,6 +174,48 @@ export default function SettingsPage() {
                     value={sfInstanceUrl}
                     onChange={(e) => setSfInstanceUrl(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sfClientId">Client ID</Label>
+                  <div className="relative">
+                    <Input
+                      id="sfClientId"
+                      type={showSfClientId ? "text" : "password"}
+                      placeholder="Consumer Key de la Connected App"
+                      value={sfClientId}
+                      onChange={(e) => setSfClientId(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowSfClientId(!showSfClientId)}
+                    >
+                      {showSfClientId ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sfClientSecret">Client Secret</Label>
+                  <div className="relative">
+                    <Input
+                      id="sfClientSecret"
+                      type={showSfClientSecret ? "text" : "password"}
+                      placeholder="Consumer Secret de la Connected App"
+                      value={sfClientSecret}
+                      onChange={(e) => setSfClientSecret(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowSfClientSecret(!showSfClientSecret)}
+                    >
+                      {showSfClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sfUsername">Username</Label>

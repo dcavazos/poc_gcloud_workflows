@@ -533,16 +533,20 @@ def send_salesforce_message(bot_config: dict, to_number: str, message: str):
     sender_id = bot_config.get("valuetextSenderId", "")
 
     instance_url = sf_config.get("instanceUrl", "")
+    client_id = sf_config.get("clientId", "")
+    client_secret = sf_config.get("clientSecret", "")
     username = sf_config.get("username", "")
     password = sf_config.get("password", "")
 
-    if not instance_url or not username or not password:
+    if not instance_url or not client_id or not client_secret or not username or not password:
         print("Salesforce credentials not configured")
         return None
 
     # 1. Get access token via username-password flow
     token_params = urllib.parse.urlencode({
         "grant_type": "password",
+        "client_id": client_id,
+        "client_secret": client_secret,
         "username": username,
         "password": password,
     })

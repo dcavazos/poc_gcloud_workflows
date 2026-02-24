@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       const orgDoc = await adminDb.collection("organizations").doc(waNumberOrgId).get();
       const sfConfig = orgDoc.data()?.salesforceConfig;
 
-      if (!sfConfig?.instanceUrl || !sfConfig?.username || !sfConfig?.password) {
+      if (!sfConfig?.instanceUrl || !sfConfig?.clientId || !sfConfig?.clientSecret || !sfConfig?.username || !sfConfig?.password) {
         return NextResponse.json(
           { error: "Salesforce credentials not configured for organization" },
           { status: 500 }
@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           grant_type: "password",
+          client_id: sfConfig.clientId,
+          client_secret: sfConfig.clientSecret,
           username: sfConfig.username,
           password: sfConfig.password,
         }),

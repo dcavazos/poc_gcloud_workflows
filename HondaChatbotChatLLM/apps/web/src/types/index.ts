@@ -13,6 +13,8 @@ export interface Organization {
   };
   salesforceConfig?: {
     instanceUrl: string;
+    clientId: string;
+    clientSecret: string;
     username: string;
     password: string;
   };
